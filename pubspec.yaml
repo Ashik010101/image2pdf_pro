@@ -1,0 +1,28 @@
+name: image2pdf_pro
+description: "Image to PDF Converter"
+publish_to: 'none'
+version: 0.1.0
+
+environment:
+  sdk: '>=3.2.3 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  image_picker: ^1.0.4
+  image: ^3.0.1
+  permission_handler: ^10.2.0
+  pdf: ^3.6.0
+  media_scanner: 
+  external_path: ^1.0.3
+  gap: ^3.0.1
+  loading_animation_widget: ^1.2.0+4
+  permission_handler_platform_interface: ^3.12.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^2.0.0
+
+flutter:
+  uses-material-design: true
