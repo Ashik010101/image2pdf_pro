@@ -21,10 +21,27 @@ class SelectedImages extends StatefulWidget {
 }
 
 class _SelectedImagesState extends State<SelectedImages> {
-  late double progressValue = 0;
-  late bool isExporting = false;
-  late int convertedImage = 0;
-  late String fileName = '';
+  double progressValue = 0;
+  bool isExporting = false;
+  int convertedImage = 0;
+  String fileName = '';
+  bool isPermissionRequested = false; 
+
+  @override
+  void initState() {
+    super.initState();
+    requestPermission();
+  }
+
+  Future<void> requestPermission() async {
+    if (!isPermissionRequested) {
+      isPermissionRequested = true;
+      var status = await Permission.storage.request();
+      if (status.isDenied) {
+        return;
+      }
+    }
+  }
 
   Future<void> _showFileNameDialog() async {
     final result = await showDialog<String>(
@@ -69,76 +86,72 @@ class _SelectedImagesState extends State<SelectedImages> {
   }
 
   Future<void> convertImage() async {
-    if (fileName.isEmpty) {
-      await _showFileNameDialog();
-      return;
-    }
-
-    // Request permission to access external storage
-    var status = await Permission.storage.request();
-    if (status.isDenied) {
-      // Permission denied by user
-      return;
-    }
-
-    setState(() {
-      isExporting = true;
-    });
-
-    final pathToSave = await ExternalPath.getExternalStoragePublicDirectory(
-        ExternalPath.DIRECTORY_DOCUMENTS);
-    debugPrint("pathToSave $pathToSave");
-    final pdf = pw.Document();
-
-    for (final imagePath in widget.imagesList.imagePaths) {
-      final imageBytes = await File(imagePath.path).readAsBytes();
-      final image = img.decodeImage(imageBytes);
-
-      if (image != null) {
-        final pdfImage = pw.MemoryImage(imageBytes);
-        pdf.addPage(
-          pw.Page(build: (pw.Context context) {
-            return pw.Center(child: pw.Image(pdfImage));
-          }),
-        );
+    try {
+      if (fileName.isEmpty) {
+        await _showFileNameDialog();
+        return;
       }
 
       setState(() {
-        convertedImage++;
-        progressValue = convertedImage / widget.imagesList.imagePaths.length;
-      });
-    }
-
-    final outputFile = File('$pathToSave/$fileName.pdf');
-    await outputFile.writeAsBytes(await pdf.save());
-
-    MediaScanner.loadMedia(path: outputFile.path);
-
-    if (mounted) {
-      setState(() {
-        isExporting = false;
+        isExporting = true;
       });
 
-      showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            title: const Text('PDF Saved'),
-            content: Text(
-                'Success!  PDF saved to your document directory as $fileName.pdf'),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  // Navigate back to the home screen after PDF saved
-                  Navigator.of(context).pop();
-                },
-                child: const Text('OK'),
-              ),
-            ],
+      final pathToSave = await ExternalPath.getExternalStoragePublicDirectory(
+          ExternalPath.DIRECTORY_DOCUMENTS);
+      debugPrint("pathToSave $pathToSave");
+      final pdf = pw.Document();
+
+      for (final imagePath in widget.imagesList.imagePaths) {
+        final imageBytes = await File(imagePath.path).readAsBytes();
+        final image = img.decodeImage(imageBytes);
+
+        if (image != null) {
+          final pdfImage = pw.MemoryImage(imageBytes);
+          pdf.addPage(
+            pw.Page(build: (pw.Context context) {
+              return pw.Center(child: pw.Image(pdfImage));
+            }),
           );
-        },
-      );
+        }
+
+        setState(() {
+          convertedImage++;
+          progressValue = convertedImage / widget.imagesList.imagePaths.length;
+        });
+      }
+
+      final outputFile = File('$pathToSave/$fileName.pdf');
+      await outputFile.writeAsBytes(await pdf.save());
+
+      MediaScanner.loadMedia(path: outputFile.path);
+
+      if (mounted) {
+        setState(() {
+          isExporting = false;
+        });
+
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: const Text('PDF Saved'),
+              content: Text(
+                  'Success!  PDF saved to your document directory as $fileName.pdf'),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text('OK'),
+                ),
+              ],
+            );
+          },
+        );
+      }
+    } catch (e) {
+      print(e);
     }
   }
 
